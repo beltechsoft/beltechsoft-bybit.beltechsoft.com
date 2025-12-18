@@ -3,6 +3,17 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+if (!function_exists('priceFormat')) {
+    function priceFormat($number) {
+        if ($number >= 1_000_000) {
+            return floor($number / 1_000_000) . 'М';
+        } elseif ($number >= 1_000) {
+            return floor($number / 1_000) . 'К';
+        } else {
+            return (string) $number;
+        }
+    }
+}
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

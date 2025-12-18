@@ -1,8 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\ByBitData\Http\Controllers\ByBitDataController;
+use Modules\ByBitData\Http\Controllers\TradesHistoryController;
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('bybitdatas', ByBitDataController::class)->names('bybitdata');
+Route::middleware(['web'])->group(function () {
+    Route::resource('trades-history', TradesHistoryController::class)->names('trades-history');
 });
+
+

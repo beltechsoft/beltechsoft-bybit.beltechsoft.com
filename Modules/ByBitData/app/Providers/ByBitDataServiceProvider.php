@@ -4,6 +4,8 @@ namespace Modules\ByBitData\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\ByBitData\Console\PointOfControlCandlesCommand;
+use Modules\ByBitData\Console\SupportZonesCommand;
 use Modules\ByBitData\Console\TickerCommand;
 use Modules\ByBitData\Console\TradesStreamCommand;
 use Nwidart\Modules\Traits\PathNamespace;
@@ -45,7 +47,12 @@ class ByBitDataServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-         $this->commands([TradesStreamCommand::class, TickerCommand::class]);
+         $this->commands([
+             TradesStreamCommand::class,
+             TickerCommand::class,
+             PointOfControlCandlesCommand::class,
+             SupportZonesCommand::class,
+         ]);
 
     }
 

@@ -4,15 +4,39 @@ namespace Modules\ByBitData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\ByBitData\Services\SymbolServices;
+use Modules\ByBitData\Services\TradesHistoryService;
 
 class TradesHistoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public function __construct(
+        protected TradesHistoryService $tradesHistoryService,
+        protected SymbolServices $symbolServices
+    ){}
+
     public function index()
     {
-        return view('bybitdata::index');
+        $symbols =$this->symbolServices->get();
+
+        $filter = [
+            'symbol' => request('filter.symbol'),
+            'tf' => '15 minutes',
+        ];
+
+        $tf15 = $this->tradesHistoryService->getVolumes($filter);
+
+        $filter = [
+            'symbol' => request('filter.symbol'),
+            'tf' => '15 minutes',
+        ];
+
+        $tf4h = $this->tradesHistoryService->getVolumes($filter);
+
+        return view('bybitdata::index', [
+            'symbols' => $symbols,
+            'tf15' => $tf15,
+            'tf4h' => $tf4h,
+        ]);
     }
 
     /**
