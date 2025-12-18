@@ -27,7 +27,7 @@ class TradesHistoryController extends Controller
 
         $filter = [
             'symbol' => request('filter.symbol'),
-            'tf' => '15 minutes',
+            'tf' => '4 hours',
         ];
 
         $tf4h = $this->tradesHistoryService->getVolumes($filter);

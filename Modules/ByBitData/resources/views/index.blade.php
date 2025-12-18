@@ -16,25 +16,37 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead>
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Время</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Покупка (P)</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Продажа (P)</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Всего (P)</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Покупка (О)</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Продажа (О)</th>
-                                <th scope="col" class="px-6 py-3 text-start text-xs font-medium">Всего (О)</th>
+
                             </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                            @foreach($value as $item)
+                            @foreach($value as $k => $item)
                                 <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ">{{++$k}}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ">{{$item->tf_15m}}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->buy_volume_usd,) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->sell_volume_usd,) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->total_volume_usd,) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->buy_ticks_count,) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->sell_ticks_count,) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">{{ priceFormat($item->total_ticks_count,) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">
+                                        @php
+                                            $buy = $item->buy_volume_usd;
+                                            $sell = $item->sell_volume_usd;
+
+                                            $percentDiff = volumePercentDiff($buy, $sell);
+                                            $percentDiffTike = volumePercentDiff($item->buy_ticks_count, $item->sell_ticks_count);
+
+                                            // Определяем победителя
+                                            $buyClass = '';
+                                            $sellClass = '';
+
+                                            if ($buy > $sell) {
+                                                $buyClass = 'text-green-600';
+                                            } elseif ($sell > $buy) {
+                                                $sellClass = 'text-red-600';
+                                            }
+                                        @endphp
+
+                                            <span class="{{ $buyClass }}">{{ priceFormat($buy)  }}</span> / <span class="{{ $sellClass }}">{{ priceFormat($sell) }}</span> &ndash; {{ $percentDiff }}<br>
+                                            <span class="{{ $buyClass }}">{{ priceFormat($item->buy_ticks_count)  }}</span> / <span class="{{ $sellClass }}">{{ priceFormat($item->sell_ticks_count) }}</span>&ndash; {{$percentDiffTike}}<br>
+                                            {{ priceFormat($item->total_volume_usd)}} / {{priceFormat($item->total_ticks_count) }}
+                                        </td>
                                 </tr>
                             @endforeach
 

@@ -6,14 +6,25 @@ use Illuminate\Http\Request;
 if (!function_exists('priceFormat')) {
     function priceFormat($number) {
         if ($number >= 1_000_000) {
-            return floor($number / 1_000_000) . 'М';
+            return number_format($number / 1_000_000, 2, ',', '') . 'М';
         } elseif ($number >= 1_000) {
-            return floor($number / 1_000) . 'К';
+            return number_format($number / 1_000, 2, ',', '') . 'К';
         } else {
-            return (string) $number;
+            return number_format($number, 2, ',', '');
         }
     }
 }
+function volumePercentDiff($buy, $sell) {
+    if ($buy == 0 && $sell == 0) {
+        return '0%';
+    } elseif ($buy == 0) {
+        return '+∞%';
+    }
+
+    $percent = abs($sell - $buy) / $buy * 100; // abs делает всегда положительным
+    return number_format($percent, 2, ',', '') . '%';
+}
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...
