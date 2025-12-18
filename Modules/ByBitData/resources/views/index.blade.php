@@ -7,6 +7,9 @@
             </a>
         @endforeach
     </div>
+    <br>
+    <br>
+    {{$symbols->firstWhere('id', request('filter.symbol'))->symbol}}
     <div class="flex flex-col">
         <div class="-m-1.5 overflow-x-auto">
             <div class="p-1.5 min-w-full inline-block align-middle">
@@ -22,9 +25,9 @@
                             <tbody class="divide-y divide-gray-200">
                             @foreach($value as $k => $item)
                                 <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ">{{++$k}}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ">{{$item->tf_15m}}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm ">
+                                    <td width="20" class="px-3 py-1 whitespace-nowrap text-sm font-medium ">{{++$k}}</td>
+                                    <td width=20 class="px-3 py-1 whitespace-nowrap text-sm font-medium ">{{$item->tf_15m}}</td>
+                                    <td class="px-3 py-1 whitespace-nowrap text-sm ">
                                         @php
                                             $buy = $item->buy_volume_usd;
                                             $sell = $item->sell_volume_usd;
