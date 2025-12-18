@@ -93,6 +93,12 @@ return [
             ],
             'processors' => [PsrLogMessageProcessor::class],
         ],
+        'trades_stream' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/trades_stream.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
 
         'stderr' => [
             'driver' => 'monolog',

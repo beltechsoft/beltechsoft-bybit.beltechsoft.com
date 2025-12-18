@@ -3,6 +3,7 @@
 namespace Modules\ByBitData\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Modules\ByBitData\Models\Trade;
 use Modules\ByBitData\Services\TickerService;
 use WebSocket\Client;
@@ -37,7 +38,7 @@ class TradesStreamCommand extends Command
         $this->info("Connecting to Bybit Linear Futures trade WebSocket...");
 
         $ws = new Client("wss://stream.bybit.com/v5/public/linear", [
-            'timeout' => 60,
+            'timeout' => 1000,
         ]);
 
         $subscribe = [
@@ -48,7 +49,7 @@ class TradesStreamCommand extends Command
         $this->info("Sent subscribe: " . json_encode($subscribe));
 
         $buffer = []; // для batch insert
-        $batchSize = 200;
+        $batchSize = 1500;
 
         while (true) {
 
@@ -94,6 +95,8 @@ class TradesStreamCommand extends Command
                             'timestamp_ms', 'direction', 'price', 'volume', 'tick_direction', 'buy_taker', 'rpi', 'seq'
                         ]);
                         $this->info("Inserted batch of " . count($buffer) . " trades.");
+                        Log::channel('trades_stream')->info("Inserted batch: " . count($buffer) . " trades");
+
                         $buffer = [];
                     }
                 }

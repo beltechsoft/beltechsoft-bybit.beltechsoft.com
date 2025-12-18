@@ -8,7 +8,16 @@ class TradesHistoryService
 {
     public function getVolumes(array $filters = []){
 
-        $result =  DB::select("SELECT
+        $tfSeconds = match ($filters['tf']) {
+            '15 minutes' => 15 * 60,
+            '4 hours'    => 4 * 60 * 60,
+            default      => 15 * 60,
+        };
+
+        $fromTimestampMs = (time() - $tfSeconds * 45) * 1000;
+
+        $result = DB::select("
+                SELECT
                     date_bin(?, to_timestamp(timestamp_ms / 1000), '1970-01-01') AS tf_15m,
                     SUM(CASE WHEN direction = 1 THEN volume_usd ELSE 0 END) AS buy_volume_usd,
                     SUM(CASE WHEN direction = 0 THEN volume_usd ELSE 0 END) AS sell_volume_usd,
@@ -18,9 +27,14 @@ class TradesHistoryService
                     COUNT(*) AS total_ticks_count
                 FROM bybit_trades
                 WHERE symbol = ?
+                  AND timestamp_ms >= ?
                 GROUP BY tf_15m
                 ORDER BY tf_15m DESC
-                LIMIT 45;",[$filters['tf'],$filters['symbol']]);
+                LIMIT 45", [
+            $filters['tf'],
+            $filters['symbol'],
+            $fromTimestampMs
+        ]);
 
         return $result;
 
