@@ -26,7 +26,8 @@
                             @foreach($value as $k => $item)
                                 <tr>
                                     <td width="20" class="px-3 py-1 whitespace-nowrap text-sm font-medium ">{{++$k}}</td>
-                                    <td width=20 class="px-3 py-1 whitespace-nowrap text-sm font-medium ">{{$item->tf_15m}}</td>
+                                    <td width=20 class="px-3 py-1 whitespace-nowrap text-sm font-medium ">
+                                        {{ \Carbon\Carbon::createFromTimestampMs($item->tf_ms)->format('d-m, H:i') }}</td>
                                     <td class="px-3 py-1 whitespace-nowrap text-sm ">
                                         @php
                                             $buyVolume = $item->buy_volume_usd;
