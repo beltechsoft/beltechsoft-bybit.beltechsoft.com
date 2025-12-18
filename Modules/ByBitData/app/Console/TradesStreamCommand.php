@@ -42,7 +42,7 @@ class TradesStreamCommand extends Command
 
         $subscribe = [
             "op" => "subscribe",
-            "args" => ["publicTrade.ETHUSDT", "publicTrade.BTCUSDT"],
+            "args" => ["publicTrade.ETHUSDT", "publicTrade.BTCUSDT", 'publicTrade.SOLUSDT', 'publicTrade.ASTERUSDT'],
         ];
         $ws->send(json_encode($subscribe));
         $this->info("Sent subscribe: " . json_encode($subscribe));
