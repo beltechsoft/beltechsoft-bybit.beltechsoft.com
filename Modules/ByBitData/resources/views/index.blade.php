@@ -29,26 +29,40 @@
                                     <td width=20 class="px-3 py-1 whitespace-nowrap text-sm font-medium ">{{$item->tf_15m}}</td>
                                     <td class="px-3 py-1 whitespace-nowrap text-sm ">
                                         @php
-                                            $buy = $item->buy_volume_usd;
-                                            $sell = $item->sell_volume_usd;
+                                            $buyVolume = $item->buy_volume_usd;
+                                            $sellVolume = $item->sell_volume_usd;
 
-                                            $percentDiff = volumePercentDiff($buy, $sell);
-                                            $percentDiffTike = volumePercentDiff($item->buy_ticks_count, $item->sell_ticks_count);
+                                            $buyTicks = $item->buy_ticks_count;
+                                            $sellTicks = $item->sell_ticks_count;
 
-                                            // Определяем победителя
-                                            $buyClass = '';
-                                            $sellClass = '';
+                                            $percentDiffVolume = volumePercentDiff($buyVolume, $sellVolume);
+                                            $percentDiffTicks = volumePercentDiff($buyTicks, $sellTicks);
 
-                                            if ($buy > $sell) {
-                                                $buyClass = 'text-green-600';
-                                            } elseif ($sell > $buy) {
-                                                $sellClass = 'text-red-600';
-                                            }
+                                            // Победитель для объёмов
+                                            $buyVolumeClass = $buyVolume > $sellVolume ? 'text-green-600' : '';
+                                            $sellVolumeClass = $sellVolume > $buyVolume ? 'text-red-600' : '';
+
+                                            // Победитель для тикетов
+                                            $buyTicksClass = $buyTicks > $sellTicks ? 'text-green-600' : '';
+                                            $sellTicksClass = $sellTicks > $buyTicks ? 'text-red-600' : '';
                                         @endphp
 
-                                            <span class="{{ $buyClass }}">{{ priceFormat($buy)  }}</span> / <span class="{{ $sellClass }}">{{ priceFormat($sell) }}</span> &ndash; {{ $percentDiff }}<br>
-                                            <span class="{{ $buyClass }}">{{ priceFormat($item->buy_ticks_count)  }}</span> / <span class="{{ $sellClass }}">{{ priceFormat($item->sell_ticks_count) }}</span>&ndash; {{$percentDiffTike}}<br>
-                                            {{ priceFormat($item->total_volume_usd)}} / {{priceFormat($item->total_ticks_count) }}
+                                            <!-- Вывод -->
+                                        <div>
+                                            <!-- Объёмы -->
+                                            <span class="{{ $buyVolumeClass }}">{{ priceFormat($buyVolume) }}</span> /
+                                            <span class="{{ $sellVolumeClass }}">{{ priceFormat($sellVolume) }}</span>
+                                            &ndash; {{ $percentDiffVolume }}<br>
+
+                                            <!-- Тикеты -->
+                                            <span class="{{ $buyTicksClass }}">{{ priceFormat($buyTicks) }}</span> /
+                                            <span class="{{ $sellTicksClass }}">{{ priceFormat($sellTicks) }}</span>
+                                            &ndash; {{ $percentDiffTicks }}<br>
+
+                                            <!-- Всего -->
+                                            {{ priceFormat($item->total_volume_usd) }} /
+                                            {{ priceFormat($item->total_ticks_count) }}
+                                        </div>
                                         </td>
                                 </tr>
                             @endforeach
