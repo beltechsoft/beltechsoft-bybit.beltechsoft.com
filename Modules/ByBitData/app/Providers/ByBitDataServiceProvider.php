@@ -2,8 +2,10 @@
 
 namespace Modules\ByBitData\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\ByBitData\Console\DetectPumpDumpCommand;
 use Modules\ByBitData\Console\PointOfControlCandlesCommand;
 use Modules\ByBitData\Console\SupportZonesCommand;
 use Modules\ByBitData\Console\TickerCommand;
@@ -52,6 +54,7 @@ class ByBitDataServiceProvider extends ServiceProvider
              TickerCommand::class,
              PointOfControlCandlesCommand::class,
              SupportZonesCommand::class,
+             DetectPumpDumpCommand::class,
          ]);
 
     }
@@ -61,10 +64,12 @@ class ByBitDataServiceProvider extends ServiceProvider
      */
     protected function registerCommandSchedules(): void
     {
-        // $this->app->booted(function () {
-        //     $schedule = $this->app->make(Schedule::class);
-        //     $schedule->command('inspire')->hourly();
-        // });
+         $this->app->booted(function () {
+             $schedule = $this->app->make(Schedule::class);
+             $schedule->command('bybit:analyze-tickers')
+                 ->everyMinute()
+                 ->withoutOverlapping();
+         });
     }
 
     /**
