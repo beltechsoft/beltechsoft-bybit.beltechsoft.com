@@ -33,6 +33,8 @@ class ByBitDataServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+
+        include_once module_path($this->name, 'app/helpers.php');
     }
 
     /**

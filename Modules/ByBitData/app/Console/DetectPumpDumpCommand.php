@@ -1,7 +1,10 @@
 <?php namespace Modules\ByBitData\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Modules\ByBitData\Entity\CandleEntity;
 use Modules\ByBitData\Models\Ticker;
 use WebSocket\Client;
 
@@ -14,62 +17,93 @@ class DetectPumpDumpCommand extends Command
 
     public function handle()
     {
-        $this->info('Bybit trade monitor started...');
+        $numCandles   = 3;   // Сколько последних закрытых свечей анализируем
+        $volumeThresh = 2;   // Рост объёма в разах
+
+        $this->info("Bybit WebSocket monitor started. Analyzing last {$numCandles} closed candles...");
+
+        $symbols = Ticker::pluck('symbol')->filter(fn($s) => strpos($s, '-') === false);
+        $topics  = $symbols->map(fn($s) => "kline.1.$s")->toArray();
+
+        if (empty($topics)) {
+            $this->warn("No symbols found.");
+            return;
+        }
+
+        $this->info("Subscribing to " . count($topics) . " symbols...");
+        $this->line("Example topics: " . implode(', ', array_slice($topics, 0, 5)) . "...");
+
+        $ws = new Client("wss://stream.bybit.com/v5/public/linear");
+
+        $ws->send(json_encode([
+            'op'   => 'subscribe',
+            'args' => array_values($topics),
+        ]));
+
+
+        $candles = []; // массив свечей по символам
 
         while (true) {
-            $symbols = Ticker::pluck('symbol')->filter(fn($s) => strpos($s, '-') === false);
+            $message = $ws->receive();
 
-            foreach ($symbols as $symbol) {
-                $response = Http::get('https://api.bybit.com/v5/market/kline', [
-                    'category' => 'linear',
-                    'symbol'   => $symbol,
-                    'interval' => 1,
-                    'limit'    => 12, // берём только 12 последних свечей
-                ]);
+            $data = json_decode($message, true);
 
-                if (!$response->ok()) {
-                    $this->warn("API error: $symbol");
+            if (!isset($data['data'])) continue;
+
+            $symbol = str_replace('kline.1.', '', $data['topic']);
+            $candle  = array_first($data['data']);
+
+            $candleEntity = CandleEntity::webService($candle +  ['symbol' => $symbol]);
+
+            if ($candleEntity->confirm === true) {
+                if(!$candleEntity->volume_usdt){
                     continue;
                 }
 
-                $klines = collect($response->json('result.list'))->reverse()->values();
+                $candles[$candleEntity->symbol][] = $candleEntity->volume_usdt;
 
-                if ($klines->count() < 12) {
-                    $this->warn("Not enough candles for $symbol");
-                    continue;
+                if (count($candles[$candleEntity->symbol]) > $numCandles) {
+                    array_shift($candles[$candleEntity->symbol]);
                 }
 
-                $lastCandle = $klines->last();
-                $avgTurnover = $klines->avg(fn($k) => (float)$k[6]);
-                $currentTurnover = (float)$lastCandle[6];
-                $volumeRatio = $avgTurnover > 0 ? $currentTurnover / $avgTurnover : 0;
+                if($candleEntity->symbol === 'ETHUSDT'){
+                    $this->info(collect($candles[$candleEntity->symbol])->map(function ($value){
+                        return priceFormat($value);
+                    })->join('/'));
+                }
 
-                $open  = (float)$lastCandle[1];
-                $close = (float)$lastCandle[4];
-                $priceChange = ($close - $open) / $open * 100;
+                if(count($candles[$candleEntity->symbol]) === $numCandles){
 
-                $isPump = $volumeRatio >= 4 && $priceChange >= 1;
-                $isDump = $volumeRatio >= 4 && $priceChange <= -1;
+                    // Вывод информации по закрытой свече
+                    $closedCandles = collect($candles[$candleEntity->symbol])->values();
+                    $avgTurnover = $closedCandles->avg();
+                    $volumeRatio = $avgTurnover > 0 ? $candleEntity->volume_usdt / $closedCandles->avg() : 0;
 
-                $startTime = \Carbon\Carbon::createFromTimestampMs($lastCandle[0])->toDateTimeString();
-                $endTime   = \Carbon\Carbon::createFromTimestampMs($lastCandle[0] + 60000 - 1)->toDateTimeString();
-                $timeInfo  = "Start: {$startTime} | End: {$endTime}";
 
-                if ($isPump || $isDump) {
-                    $emoji = $isPump ? "🚀" : "💥";
-                    $text = "{$emoji} " . ($isPump ? "PUMP" : "DUMP") . " detected on {$symbol} | Price: {$close} | Change: ".round($priceChange,2)."% | Volume ratio: ".round($volumeRatio,2)."x | {$timeInfo}";
+                    $isPump = $volumeRatio >= $volumeThresh && $candleEntity->priceChange >= 1;
+                    $isDump = $volumeRatio >= $volumeThresh && $candleEntity->priceChange <= -1;
+                    $volumeAvgFormat = priceFormat($avgTurnover);
 
-                    $this->info($text);
+                    $volumes = collect($candles[$candleEntity->symbol])->map(function ($value){
+                        return priceFormat($value);
+                    })->join(' / ');
 
-                    // Отправка уведомления в Telegram
-                    $this->sendTelegramNotification($text);
+                    if ($isPump || $isDump) {
+                        $emoji = $isPump ? "🚀" : "💥";
+                        $text = "{$emoji} " . ($isPump ? "PUMP" : "DUMP") . " detected on {$candleEntity->symbol} | AVG: {$volumeAvgFormat}  | Volume: {$volumes} | Volume ratio: ".round($volumeRatio,2)."x ";
+
+                        $this->info($text);
+
+                        // Отправка уведомления в Telegram
+                        $this->sendTelegramNotification($text);
+                    }
                 }
             }
-
-            // Пауза между итерациями, чтобы не перегружать API
-            sleep(30); // 30 секунд, можно менять
         }
     }
+
+
+
 
     /**
      * Отправка сообщения в Telegram
