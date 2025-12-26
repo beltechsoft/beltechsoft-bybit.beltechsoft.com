@@ -68,9 +68,7 @@ class ByBitDataServiceProvider extends ServiceProvider
     {
          $this->app->booted(function () {
              $schedule = $this->app->make(Schedule::class);
-             $schedule->command('bybit:analyze-tickers')
-                 ->everyMinute()
-                 ->withoutOverlapping();
+             $schedule->command('bybit:pump-dump')->everyMinute()->withoutOverlapping();
          });
     }
 
