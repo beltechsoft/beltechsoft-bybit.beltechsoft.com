@@ -4,6 +4,7 @@ namespace Modules\ByBitData\Entity;
 
 use ArrayAccess;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 class CandleEntity implements ArrayAccess
 {
@@ -15,27 +16,34 @@ class CandleEntity implements ArrayAccess
     public float $low;
     public float $volume;
     public float $volume_usdt;
-    public int $start;      // timestamp начала свечи
-    public int $end;        // timestamp конца свечи
+    public int $start_ts;      // timestamp начала свечи
+    public int $end_ts;        // timestamp конца свечи
     public bool $confirm;
-    public float $priceChange;
+    public float $price_change;
     public string $direction = 'flat'; // направление свечи: up/down/flat
+    public ?Carbon $start;
+    public int $time_ts;
+    public Carbon $time;
+    public float $current_price;
 
 
-    static public function webService($kline)
+    static public function webService($candle): self
     {
         $self = new self();
-        $self->symbol   = $kline['symbol'] ?? '';
-        $self->open     = (float)($kline['open'] ?? 0);
-        $self->close    = (float)($kline['close'] ?? 0);
-        $self->high     = (float)($kline['high'] ?? 0);
-        $self->low      = (float)($kline['low'] ?? 0);
-        $self->volume   = (float)($kline['volume'] ?? 0);
-        $self->volume_usdt = (float)($kline['turnover'] ?? 0);
-        $self->start    = $kline['start'] ?? 0;
-        $self->end      = $kline['end'] ?? 0;
-        $self->confirm  = Arr::get($kline,'confirm', true);
-        $self->priceChange = (float)($self->close - $self->open) / $self->open * 100;
+        $self->symbol   = $candle['symbol'] ?? '';
+        $self->open     = (float)($candle['open'] ?? 0);
+        $self->close    = (float)($candle['close'] ?? 0);
+        $self->current_price = $self->close;
+        $self->high     = (float)($candle['high'] ?? 0);
+        $self->low      = (float)($candle['low'] ?? 0);
+        $self->volume   = (float)($candle['volume'] ?? 0);
+        $self->volume_usdt = (float)($candle['turnover'] ?? 0);
+        $self->start_ts    = $candle['start'] ?? 0;
+        $self->end_ts      = $candle['end'] ?? 0;
+        $self->time_ts    = $candle['timestamp'];
+        $self->time = Carbon::createFromTimestampMs($self->time_ts);
+        $self->confirm  = Arr::get($candle,'confirm', true);
+        $self->price_change = (float)($self->close - $self->open) / $self->open * 100;
         $self->direction = $self->close > $self->open ? 'up' : ($self->close < $self->open ? 'down' : 'flat');
 
         return $self;

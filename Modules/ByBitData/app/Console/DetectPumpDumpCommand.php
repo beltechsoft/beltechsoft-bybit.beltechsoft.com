@@ -15,9 +15,9 @@ class DetectPumpDumpCommand extends Command
     protected $description = 'Detect pump and dump on Bybit by volume';
 
 
-    public function handle()
+    public function handle(): void
     {
-        $numCandles   = 5;   // Сколько последних закрытых свечей анализируем
+        $numCandles   = 3;   // Сколько последних закрытых свечей анализируем
         $volumeThresh = 4;   // Рост объёма в разах
 
         $this->info("Bybit WebSocket monitor started. Analyzing last {$numCandles} closed candles...");
@@ -40,8 +40,7 @@ class DetectPumpDumpCommand extends Command
             'args' => array_values($topics),
         ]));
 
-
-        $candles = []; // массив свечей по символам
+        $candlesOpen = $candlesClosed = [];
 
         while (true) {
             $message = $ws->receive();
@@ -55,49 +54,63 @@ class DetectPumpDumpCommand extends Command
 
             $candleEntity = CandleEntity::webService($candle +  ['symbol' => $symbol]);
 
+            if(!$candleEntity->volume_usdt){
+                continue;
+            }
+
+            if(!Arr::has($candlesOpen, $candleEntity->symbol)){
+                $candlesOpen[$candleEntity->symbol] = 0;
+            }
+
+            if(!Arr::has($candlesClosed, $candleEntity->symbol)){
+                $candlesClosed[$candleEntity->symbol] = [];
+            }
+
+            if($candleEntity->confirm === false) {
+                $candlesOpen[$candleEntity->symbol] = $candleEntity->volume_usdt;
+            }
+
             if ($candleEntity->confirm === true) {
-                if(!$candleEntity->volume_usdt){
-                    continue;
-                }
-
-                $candles[$candleEntity->symbol][] = $candleEntity->volume_usdt;
-
-                if (count($candles[$candleEntity->symbol]) > $numCandles) {
-                    array_shift($candles[$candleEntity->symbol]);
-                }
-
-                if($candleEntity->symbol === 'ETHUSDT'){
-                    $this->info(collect($candles[$candleEntity->symbol])->map(function ($value){
-                        return priceFormat($value);
-                    })->join('/'));
-                }
-
-                if(count($candles[$candleEntity->symbol]) === $numCandles){
-
-                    // Вывод информации по закрытой свече
-                    $closedCandles = collect($candles[$candleEntity->symbol])->values();
-                    $avgTurnover = $closedCandles->avg();
-                    $volumeRatio = $avgTurnover > 0 ? $candleEntity->volume_usdt / $closedCandles->avg() : 0;
+                $candlesClosed[$candleEntity->symbol][] = $candleEntity->volume_usdt;
+            }
 
 
-                    $isPump = $volumeRatio >= $volumeThresh && $candleEntity->priceChange >= 1;
-                    $isDump = $volumeRatio >= $volumeThresh && $candleEntity->priceChange <= -1;
-                    $volumeAvgFormat = priceFormat($avgTurnover);
+            if(count($candlesClosed[$candleEntity->symbol]) === $numCandles && Arr::has($candlesOpen, $candleEntity->symbol)) {
 
-                    $volumes = collect($candles[$candleEntity->symbol])->map(function ($value){
+                // Вывод информации по закрытой свече
+                $closedCandlesCollection = collect($candlesClosed[$candleEntity->symbol])->values();
+                $closedCandlesAvg = $closedCandlesCollection->avg();
+                $volumeRatio = $closedCandlesAvg > 0 ? $candlesOpen[$candleEntity->symbol] / $closedCandlesAvg : 0;
+
+
+                $isPump = $volumeRatio >= $volumeThresh && $candleEntity->price_change >= 1;
+                $isDump = $volumeRatio >= $volumeThresh && $candleEntity->price_change <= -1;
+
+                $volumeAvgFormat = priceFormat($closedCandlesAvg);
+
+
+
+
+                if ($isPump || $isDump) {
+
+                    $volumes = collect(array_merge($candlesClosed[$candleEntity->symbol], [$candlesOpen[$candleEntity->symbol]]))->map(function ($value){
                         return priceFormat($value);
                     })->join(' / ');
 
-                    if ($isPump || $isDump) {
-                        $emoji = $isPump ? "🚀" : "💥";
-                        $text = "{$emoji} " . ($isPump ? "PUMP" : "DUMP") . " detected on {$candleEntity->symbol} | AVG: {$volumeAvgFormat}  | Volume: {$volumes} | Volume ratio: ".round($volumeRatio,2)."x ";
+                    $emoji = $isPump ? "🚀" : "💥";
+                    $text = "{$emoji} " . ($isPump ? "PUMP" : "DUMP") . " detected on {$candleEntity->symbol}" . " | AVG: {$volumeAvgFormat}" . " | Price: {$candleEntity->current_price}" . " | Volume: {$volumes}" . " | Time: {$candleEntity->time}" . " | Volume ratio: ".round($volumeRatio,2)."x ";
 
-                        $this->info($text);
+                    $candlesClosed[$candleEntity->symbol] = [];
 
-                        // Отправка уведомления в Telegram
-                        $this->sendTelegramNotification($text);
-                    }
+                    $this->info($text);
+
+                    // Отправка уведомления в Telegram
+                    $this->sendTelegramNotification($text);
                 }
+            }
+
+            if (count($candlesClosed[$candleEntity->symbol]) > $numCandles) {
+                array_shift($candlesClosed[$candleEntity->symbol]);
             }
         }
     }
@@ -110,9 +123,6 @@ class DetectPumpDumpCommand extends Command
      */
     protected function sendTelegramNotification(string $message)
     {
-        $botToken = config('services.telegram.bot_token');
-        $chatId   = config('services.telegram.chat_id');
-
         Http::post("https://api.telegram.org/bot1333270563:AAFItPFP06IcajIASz9pO73M7jSdTFjkb5Q/sendMessage", [
             'chat_id' => '577008219',
             'text'    => $message,
