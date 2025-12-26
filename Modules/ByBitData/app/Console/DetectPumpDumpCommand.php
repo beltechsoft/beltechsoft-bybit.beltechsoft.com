@@ -17,8 +17,8 @@ class DetectPumpDumpCommand extends Command
 
     public function handle()
     {
-        $numCandles   = 3;   // Сколько последних закрытых свечей анализируем
-        $volumeThresh = 2;   // Рост объёма в разах
+        $numCandles   = 5;   // Сколько последних закрытых свечей анализируем
+        $volumeThresh = 4;   // Рост объёма в разах
 
         $this->info("Bybit WebSocket monitor started. Analyzing last {$numCandles} closed candles...");
 
