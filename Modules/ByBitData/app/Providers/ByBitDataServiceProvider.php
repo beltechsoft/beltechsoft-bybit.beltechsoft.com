@@ -52,11 +52,14 @@ class ByBitDataServiceProvider extends ServiceProvider
     protected function registerCommands(): void
     {
          $this->commands([
-             TradesStreamCommand::class,
+             DetectPumpDumpCommand::class,
              TickerCommand::class,
+
+             /*
+             TradesStreamCommand::class,
              PointOfControlCandlesCommand::class,
              SupportZonesCommand::class,
-             DetectPumpDumpCommand::class,
+             */
          ]);
 
     }
@@ -68,7 +71,11 @@ class ByBitDataServiceProvider extends ServiceProvider
     {
          $this->app->booted(function () {
              $schedule = $this->app->make(Schedule::class);
-             $schedule->command('bybit:pump-dump')->everyMinute()->withoutOverlapping();
+             // Каждые 4 часа в UTC
+
+             $schedule->command('bybit:ticker') ->cron('*/45 * * * *')->timezone('UTC')->withoutOverlapping();
+             $schedule->command('bybit:pump-dump')->cron('0 0,4,8,12,16,20 * * *')->timezone('UTC')->withoutOverlapping();
+
          });
     }
 

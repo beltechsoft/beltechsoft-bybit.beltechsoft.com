@@ -6,7 +6,7 @@ use ArrayAccess;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
-class CandleEntity implements ArrayAccess
+class KlineEntity implements ArrayAccess
 {
 
     public string $symbol;
@@ -45,6 +45,30 @@ class CandleEntity implements ArrayAccess
         $self->confirm  = Arr::get($candle,'confirm', true);
         $self->price_change = (float)($self->close - $self->open) / $self->open * 100;
         $self->direction = $self->close > $self->open ? 'up' : ($self->close < $self->open ? 'down' : 'flat');
+
+        return $self;
+    }
+
+    static public function makeHttp(array $candle, string $symbol = ''): self
+    {
+        $self = new self();
+
+        // Если символ не передан, можно взять из параметра
+        $self->symbol        = $symbol;
+        $self->open          = (float)($candle[1] ?? 0);
+        $self->close         = (float)($candle[4] ?? 0);
+        $self->current_price = $self->close;
+        $self->high          = (float)($candle[2] ?? 0);
+        $self->low           = (float)($candle[3] ?? 0);
+        $self->volume        = (float)($candle[5] ?? 0);
+        $self->volume_usdt   = (float)($candle[6] ?? 0);
+        $self->start_ts      = $candle[0] ?? 0; // timestamp начала свечи
+        $self->end_ts        = $candle[0] ?? 0; // Bybit не отдаёт отдельный end, можно использовать start
+        $self->time_ts       = $candle[0] ?? 0;
+        $self->time          = Carbon::createFromTimestampMs($self->time_ts);
+        $self->confirm       = true; // Bybit всегда "подтверждённая" свеча
+        $self->price_change  = abs($self->open != 0 ? ($self->close - $self->open) / $self->open * 100 : 0);
+        $self->direction     = $self->close > $self->open ? 'up' : ($self->close < $self->open ? 'down' : 'flat');
 
         return $self;
     }
